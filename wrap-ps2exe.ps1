@@ -17,17 +17,26 @@ Optional icon path.
 .PARAMETER RequireAdmin
 Switch to request administrator privileges via UAC.
 
-.PARAMETER OtherArgs
-Hashtable of additional PS2EXE parameters (x86/x64, STA/MTA, embedFiles, DPIAware, noConsole, etc.).
+.PARAMETER NoConsole
+Switch to create a Windows Forms app without a console window.
 
-.DESCRIPTION
-This wrapper script:
-- Builds a standalone EXE from a PowerShell script or inline command.
-- Embeds metadata such as Title, Description, Company, Product, Version.
-- Optionally requests administrator privileges.
-- Automatically creates or reuses a self-signed certificate for signing.
-- Signs the EXE if signtool.exe is found.
-- Supports any additional PS2EXE parameters via OtherArgs.
+.PARAMETER Title
+Optional EXE title (defaults to script name).
+
+.PARAMETER Description
+Optional EXE description (defaults to "Wrapped <ScriptName> PowerShell script").
+
+.PARAMETER Product
+Optional product name (defaults to script name).
+
+.PARAMETER Company
+Optional company name (defaults to current Windows username).
+
+.PARAMETER Version
+Optional version string (defaults to "1.0.0.0").
+
+.PARAMETER OtherArgs
+Hashtable of additional PS2EXE parameters (x86/x64, STA/MTA, embedFiles, DPIAware, etc.).
 #>
 
 param(
@@ -42,6 +51,14 @@ param(
 
     [string]$IconFile = "",
     [switch]$RequireAdmin,
+    [switch]$NoConsole,
+
+    [string]$Title,
+    [string]$Description,
+    [string]$Product,
+    [string]$Company,
+    [string]$Version = "1.0.0.0",
+
     [hashtable]$OtherArgs
 )
 
@@ -55,6 +72,7 @@ if ($PSCmdlet.ParameterSetName -eq "Script" -and -not (Test-Path $ScriptPath)) {
 }
 
 $ScriptName = if ($PSCmdlet.ParameterSetName -eq "Script") { [IO.Path]::GetFileNameWithoutExtension($ScriptPath) } else { "InlineScript" }
+
 if (-not [System.IO.Path]::IsPathRooted($OutputFile)) {
     $OutputFile = Join-Path -Path (Get-Location) -ChildPath $OutputFile
 }
@@ -66,11 +84,11 @@ if (-not (Test-Path $TargetDir)) { New-Item -Path $TargetDir -ItemType Directory
 # Defaults for metadata
 # -----------------------------
 $Username = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[-1]
-$Title = $ScriptName
-$Description = "Wrapped $ScriptName PowerShell script"
-$Company = $Username
-$Product = $ScriptName
-$Version = "1.0.0.0"
+$Title = $Title  ? $Title  : $ScriptName
+$Description = $Description ? $Description : "Wrapped $ScriptName PowerShell script"
+$Product = $Product ? $Product : $ScriptName
+$Company = $Company ? $Company : $Username
+$Version = $Version
 $CertName = "PS2EXE-$Company"
 
 # -----------------------------
@@ -86,17 +104,10 @@ if (-not (Get-Module -ListAvailable -Name ps2exe)) {
 # -----------------------------
 if ($PSCmdlet.ParameterSetName -eq "Inline") {
     $TempScript = Join-Path $env:TEMP ("wrap-inline-" + [guid]::NewGuid().ToString() + ".ps1")
-    # Ensure InlineCommand is non-empty and properly split into lines
-    if ([string]::IsNullOrWhiteSpace($InlineCommand)) {
-        Write-Error "InlineCommand cannot be empty"; exit 1
-    }
-
-    # Convert to array of lines
     $ScriptContent = $InlineCommand -split "`r?`n"
-
-    # Write to temporary script
     Set-Content -Path $TempScript -Value $ScriptContent -Encoding UTF8
     Write-Host "Created temporary script for inline command: $TempScript" -ForegroundColor Cyan
+    $ScriptPath = $TempScript
 }
 
 # -----------------------------
@@ -139,15 +150,16 @@ $rootStore.Close()
 # PS2EXE parameters with defaults
 # -----------------------------
 $Ps2ExeParams = @{
-    inputFile = $ScriptPath
-    outputFile = $OutputFile
+    inputFile   = $ScriptPath
+    outputFile  = $OutputFile
     requireAdmin = $RequireAdmin
-    iconFile = $IconFile
-    title = $Title
+    noConsole   = $NoConsole
+    iconFile    = $IconFile
+    title       = $Title
     description = $Description
-    company = $Company
-    product = $Product
-    version = $Version
+    company     = $Company
+    product     = $Product
+    version     = $Version
 }
 
 if ($OtherArgs) { $Ps2ExeParams += $OtherArgs }
