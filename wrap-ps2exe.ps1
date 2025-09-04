@@ -84,11 +84,11 @@ if (-not (Test-Path $TargetDir)) { New-Item -Path $TargetDir -ItemType Directory
 # Defaults for metadata
 # -----------------------------
 $Username = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[-1]
-$Title = $Title  ? $Title  : $ScriptName
-$Description = $Description ? $Description : "Wrapped $ScriptName PowerShell script"
-$Product = $Product ? $Product : $ScriptName
-$Company = $Company ? $Company : $Username
-$Version = $Version
+if (-not $Title) { $Title = $ScriptName }
+if (-not $Description) { $Description = "Wrapped $ScriptName PowerShell script" }
+if (-not $Product) { $Product = $ScriptName }
+if (-not $Company) { $Company = $Username }
+if (-not $Version) { $Version = "1.0.0.0" }
 $CertName = "PS2EXE-$Company"
 
 # -----------------------------
