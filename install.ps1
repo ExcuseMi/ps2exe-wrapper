@@ -5,7 +5,7 @@ Installs or updates ps2exe-wrapper.exe to a user-local folder and adds it to PAT
 
 param(
     [string]$InstallDir = "$env:LOCALAPPDATA\ps2exe-wrapper",
-    [string]$RepoPS1Url = "https://raw.githubusercontent.com/ExcuseMi/ps2exe-wrapper/main/wrap-ps2exe.ps1"
+    [string]$RepoPS1Url = "https://raw.githubusercontent.com/ExcuseMi/ps2exe-wrapper/refs/heads/main/wrap-ps2exe.ps1"
 )
 
 # 1️⃣ Create folder if missing
